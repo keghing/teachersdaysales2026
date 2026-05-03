@@ -100,7 +100,8 @@ function doPost(e) {
 
       const itemsStr = data.items.map(i => {
         const teacher = i.teacher ? ` (For: ${i.teacher})` : "";
-        return `${i.name} x${i.qty}${teacher}`;
+        const teacherMessage = i.teacherMessage ? ` (Msg: ${i.teacherMessage})` : "";
+        return `${i.name} x${i.qty}${teacher}${teacherMessage}`;
       }).join(" | ");
 
       ordersSheet.appendRow([

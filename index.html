@@ -170,7 +170,7 @@ button { -webkit-appearance: none; appearance: none; }
 .cart-items { flex: 1; overflow-y: auto; padding: 14px; -webkit-overflow-scrolling: touch; }
 .cart-empty { text-align: center; color: var(--muted); padding: 48px 20px; font-size: 14px; }
 .cart-empty-emoji { font-size: 40px; display: block; margin-bottom: 10px; }
-.cart-item { display: flex; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--border); align-items: center; }
+.cart-item { display: flex; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--border); align-items: flex-start; }
 .cart-item-thumb {
   width: 44px; height: 44px; border-radius: 10px; overflow: hidden;
   background: #FFF3EC; flex-shrink: 0;
@@ -184,6 +184,10 @@ button { -webkit-appearance: none; appearance: none; }
 .cart-teacher-input {
   margin-top: 8px; padding: 9px 10px; border-radius: 9px;
   font-size: 13px; min-height: 38px;
+}
+.cart-message-input {
+  margin-top: 8px; padding: 9px 10px; border-radius: 9px;
+  font-size: 13px; min-height: 70px; resize: vertical;
 }
 .qty-controls { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 .qty-btn {
@@ -203,6 +207,15 @@ button { -webkit-appearance: none; appearance: none; }
   width: 100%; padding: 16px; border: none;
   border-radius: 14px; font-size: 16px; font-weight: 600;
   cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif; min-height: var(--tap-min);
+}
+.contact-strip {
+  margin: 2px 16px 20px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff6ef;
+  font-size: 12.5px;
+  color: var(--muted);
 }
 
 /* ---- PAGES ---- */
@@ -510,6 +523,7 @@ textarea { resize: vertical; min-height: 90px; }
     <div class="section-title">🍱 Food &amp; Snacks</div>
     <div class="product-grid" id="product-grid"></div>
   </div>
+  <div class="contact-strip">Need help? Contact: <strong id="contact-number-disp">-</strong></div>
   <!-- No admin link visible here — access via ?admin in URL -->
 </div>
 
@@ -767,6 +781,7 @@ document.getElementById('deadline-display').textContent = ORDER_DEADLINE;
 document.getElementById('tng-disp').textContent         = TNG_NUMBER;
 document.getElementById('tng-name-disp').textContent    = TNG_ACCT_NAME;
 document.getElementById('collection-disp').textContent  = COLLECTION_SPOT;
+document.getElementById('contact-number-disp').textContent = TNG_NUMBER;
 if (TNG_QR_IMAGE) {
   document.getElementById('tng-qr-img').src = TNG_QR_IMAGE;
   document.getElementById('tng-qr-wrap').style.display = 'block';
@@ -857,6 +872,15 @@ function updateCartTeacher(id, value) {
   if (item) item.teacher = value.slice(0, 80);
 }
 
+function needsTeacherMessage(itemId) {
+  return itemId === 4 || itemId === 5 || itemId === 6;
+}
+
+function updateCartTeacherMessage(id, value) {
+  const item = cart.find(x => x.id === id);
+  if (item) item.teacherMessage = value.slice(0, 220);
+}
+
 function changeQty(id, d) {
   const item = cart.find(x => x.id === id);
   if (!item) return;
@@ -880,6 +904,9 @@ function refreshCartUI() {
     const thumb = i.photo
       ? `<div class="cart-item-thumb"><img src="${i.photo}" alt="${i.name}" onerror="this.parentElement.textContent='${i.emoji}'"></div>`
       : `<div class="cart-item-thumb">${i.emoji}</div>`;
+    const teacherMessageField = needsTeacherMessage(i.id)
+      ? `<textarea class="cart-message-input" maxlength="220" placeholder="Message for teacher (for appreciation letter)" oninput="updateCartTeacherMessage(${i.id}, this.value)">${escapeHTML(i.teacherMessage||'')}</textarea>`
+      : '';
     return `
     <div class="cart-item">
       ${thumb}
@@ -887,6 +914,7 @@ function refreshCartUI() {
         <div class="cart-item-name">${i.name}</div>
         <div class="cart-item-price">RM${(i.price*i.qty).toFixed(2)}</div>
         <input type="text" class="cart-teacher-input" value="${escapeHTML(i.teacher||'')}" maxlength="80" placeholder="Who is this for" oninput="updateCartTeacher(${i.id}, this.value)">
+        ${teacherMessageField}
       </div>
       <div class="qty-controls">
         <button class="qty-btn" onclick="changeQty(${i.id},-1)">−</button>
@@ -1014,7 +1042,11 @@ function pickPayment(m) {
 function renderReview() {
   const total = cart.reduce((s,i) => s+i.price*i.qty, 0);
   let html = `<div class="review-header">Items Ordered</div>`;
-  cart.forEach(i => { html += `<div class="review-row"><span>${i.emoji} ${i.name} × ${i.qty}</span><span>RM${(i.price*i.qty).toFixed(2)}</span></div>`; });
+  cart.forEach(i => {
+    const forTeacher = i.teacher ? `<br><small style="color:var(--muted);font-weight:400;">For: ${escapeHTML(i.teacher)}</small>` : '';
+    const teacherMsg = i.teacherMessage ? `<br><small style="color:var(--muted);font-weight:400;">Msg: ${escapeHTML(i.teacherMessage)}</small>` : '';
+    html += `<div class="review-row"><span>${i.emoji} ${i.name} × ${i.qty}${forTeacher}${teacherMsg}</span><span>RM${(i.price*i.qty).toFixed(2)}</span></div>`;
+  });
   const remark = getOrderRemark();
   if (remark) html += `<div class="review-row"><span>Remark</span><span style="text-align:right;max-width:60%;">${escapeHTML(remark)}</span></div>`;
   html += `<div class="review-total"><span>Total</span><span>RM${total.toFixed(2)}</span></div>`;
@@ -1110,7 +1142,7 @@ async function loadAdmin() {
   } catch {
     adminOrders = JSON.parse(localStorage.getItem('hg_fallback')||'[]').map(o => ({
       id:o.id, ts:o.ts, buyer:o.buyer, cls:o.cls, phone:o.phone, remark:o.remark,
-      items:o.items.map(i=>`${i.name} x${i.qty}`).join(' | '),
+      items:o.items.map(i=>`${i.name} x${i.qty}${i.teacher ? ` (For: ${i.teacher})` : ''}${i.teacherMessage ? ` (Msg: ${i.teacherMessage})` : ''}`).join(' | '),
       total:o.total, pay:o.pay, tngRef:o.tngRef, status:'pending (local)'
     }));
     adminMails = [];
@@ -1261,4 +1293,7 @@ refreshCartUI();
 </script>
 </body>
 </html>
+
+
+
 
