@@ -881,6 +881,15 @@ function updateCartTeacherMessage(id, value) {
   if (item) item.teacherMessage = value.slice(0, 220);
 }
 
+function getLineTotal(item) {
+  if (item.id === 1) {
+    const pairs = Math.floor(item.qty / 2);
+    const singles = item.qty % 2;
+    return (pairs * 5) + (singles * 3);
+  }
+  return item.price * item.qty;
+}
+
 function changeQty(id, d) {
   const item = cart.find(x => x.id === id);
   if (!item) return;
@@ -891,7 +900,7 @@ function changeQty(id, d) {
 
 function refreshCartUI() {
   const totalQty = cart.reduce((s,i) => s+i.qty, 0);
-  const totalAmt = cart.reduce((s,i) => s+i.price*i.qty, 0);
+  const totalAmt = cart.reduce((s,i) => s+getLineTotal(i), 0);
   document.getElementById('cart-count').textContent     = totalQty;
   document.getElementById('cart-total-disp').textContent = `RM${totalAmt.toFixed(2)}`;
 
@@ -912,7 +921,7 @@ function refreshCartUI() {
       ${thumb}
       <div class="cart-item-info">
         <div class="cart-item-name">${i.name}</div>
-        <div class="cart-item-price">RM${(i.price*i.qty).toFixed(2)}</div>
+        <div class="cart-item-price">RM${getLineTotal(i).toFixed(2)}</div>
         <input type="text" class="cart-teacher-input" value="${escapeHTML(i.teacher||'')}" maxlength="80" placeholder="Who is this for" oninput="updateCartTeacher(${i.id}, this.value)">
         ${teacherMessageField}
       </div>
@@ -1040,12 +1049,12 @@ function pickPayment(m) {
 }
 
 function renderReview() {
-  const total = cart.reduce((s,i) => s+i.price*i.qty, 0);
+  const total = cart.reduce((s,i) => s+getLineTotal(i), 0);
   let html = `<div class="review-header">Items Ordered</div>`;
   cart.forEach(i => {
     const forTeacher = i.teacher ? `<br><small style="color:var(--muted);font-weight:400;">For: ${escapeHTML(i.teacher)}</small>` : '';
     const teacherMsg = i.teacherMessage ? `<br><small style="color:var(--muted);font-weight:400;">Msg: ${escapeHTML(i.teacherMessage)}</small>` : '';
-    html += `<div class="review-row"><span>${i.emoji} ${i.name} × ${i.qty}${forTeacher}${teacherMsg}</span><span>RM${(i.price*i.qty).toFixed(2)}</span></div>`;
+    html += `<div class="review-row"><span>${i.emoji} ${i.name} × ${i.qty}${forTeacher}${teacherMsg}</span><span>RM${getLineTotal(i).toFixed(2)}</span></div>`;
   });
   const remark = getOrderRemark();
   if (remark) html += `<div class="review-row"><span>Remark</span><span style="text-align:right;max-width:60%;">${escapeHTML(remark)}</span></div>`;
@@ -1065,7 +1074,7 @@ async function placeOrder() {
   btn.disabled = true; btn.textContent = "Sending...";
   document.getElementById('loading-overlay').classList.add('show');
 
-  const total   = cart.reduce((s,i) => s+i.price*i.qty, 0);
+  const total   = cart.reduce((s,i) => s+getLineTotal(i), 0);
   const orderId = 'HG-'+Date.now().toString().slice(-5);
   const payload = {
     type:"order", id:orderId,
@@ -1293,6 +1302,7 @@ refreshCartUI();
 </script>
 </body>
 </html>
+
 
 
 
